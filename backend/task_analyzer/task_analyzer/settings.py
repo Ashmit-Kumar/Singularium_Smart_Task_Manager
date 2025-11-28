@@ -44,8 +44,7 @@ INSTALLED_APPS = [
     # Third-party
     "rest_framework",
 
-    # Internal (Infrastructure layer)
-    "tasks",
+    # Internal apps will be registered here once created
 ]
 
 # ---------------------------------------------------------
