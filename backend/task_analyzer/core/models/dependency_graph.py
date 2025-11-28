@@ -21,15 +21,19 @@ class DependencyGraph:
         self.rec_stack = set()
         self.cycles = []
 
+    def _reset_state(self):
+        self.visited.clear()
+        self.rec_stack.clear()
+        self.cycles.clear()
+
     def _dfs(self, task_id, path):
         if task_id in self.rec_stack:
-            # cycle found
             cycle_start = path.index(task_id)
             self.cycles.append(path[cycle_start:])
-            return True
+            return
 
         if task_id in self.visited:
-            return False
+            return
 
         self.visited.add(task_id)
         self.rec_stack.add(task_id)
@@ -37,21 +41,23 @@ class DependencyGraph:
         task = self.tasks.get(task_id)
         if not task:
             self.rec_stack.remove(task_id)
-            return False
+            return
 
         for dep in task.dependencies:
-            if self._dfs(dep, path + [dep]):
-                self.rec_stack.remove(task_id)
-                return True
+            self._dfs(dep, path + [dep])
 
         self.rec_stack.remove(task_id)
-        return False
+
+    def _detect_cycles(self):
+        self._reset_state()
+        for task_id in self.tasks:
+            self._dfs(task_id, [task_id])
 
     def has_cycle(self):
-        for task_id in self.tasks:
-            if self._dfs(task_id, [task_id]):
-                return True
-        return False
+        self._detect_cycles()
+        return bool(self.cycles)
 
     def get_cycles(self):
+        if not self.cycles:
+            self._detect_cycles()
         return self.cycles
