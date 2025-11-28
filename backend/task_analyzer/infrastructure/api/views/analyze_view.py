@@ -20,6 +20,7 @@ from rest_framework import status
 
 from infrastructure.api.serializers.task_serializer import AnalyzePayloadSerializer
 from application.services.analyze_tasks_service import analyze_tasks_service
+from infrastructure.api.state import set_last_analyzed_payload
 
 
 class AnalyzeView(APIView):
@@ -56,6 +57,7 @@ class AnalyzeView(APIView):
 
         try:
             result = analyze_tasks_service(tasks_payload, config_overrides)
+            set_last_analyzed_payload(tasks_payload)
             return Response({"results": result}, status=status.HTTP_200_OK)
         except Exception as exc:
             # Log the exception in production; return minimal error info here

@@ -33,6 +33,13 @@ class TaskValidator:
 		estim = getattr(task, "estimated_hours", None)
 		if estim is None:
 			issues.append({"field": "estimated_hours", "message": "estimated hours required"})
+		else:
+			try:
+				hours = float(estim)
+				if hours <= 0:
+					issues.append({"field": "estimated_hours", "message": "estimated hours must be positive"})
+			except Exception:
+				issues.append({"field": "estimated_hours", "message": "estimated hours must be numeric"})
 
 		deps = getattr(task, "dependencies", None)
 		if deps is not None and not isinstance(deps, list):

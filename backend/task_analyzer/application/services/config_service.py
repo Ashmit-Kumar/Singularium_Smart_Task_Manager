@@ -13,16 +13,18 @@ Outputs:
 
 from typing import Dict
 from copy import deepcopy
+from dataclasses import asdict
+
+from core.scoring.scoring_config import ScoringConfig
+
+_DEFAULT_SCORING_CFG = ScoringConfig()
+
+_SCORING_DEFAULTS = asdict(_DEFAULT_SCORING_CFG)
 
 DEFAULT_APP_CONFIG: Dict = {
-    "weight_urgency": 2.0,
-    "weight_importance": 2.5,
-    "weight_effort": 1.0,
-    "weight_dependency": 1.5,
-    "urgency_mode": "exponential",
-    "urgency_threshold_days": 3,
-    "overdue_base": 10.0,
-    "overdue_growth": 1.0,
+    # scoring-related defaults (must align with ScoringConfig fields)
+    **_SCORING_DEFAULTS,
+    # additional application-level toggles
     "default_estimated_hours": 4.0,
     "min_importance": 1,
     "max_importance": 10,
@@ -62,3 +64,13 @@ def merge_config(overrides: Dict) -> Dict:
         else:
             cfg[k] = v
     return cfg
+
+
+def build_scoring_config(cfg: Dict) -> ScoringConfig:
+    """Convert merged config mapping into ScoringConfig dataclass."""
+
+    scoring_values = asdict(_DEFAULT_SCORING_CFG)
+    for field in scoring_values:
+        if field in cfg:
+            scoring_values[field] = cfg[field]
+    return ScoringConfig(**scoring_values)

@@ -22,7 +22,7 @@ from typing import List, Dict, Tuple
 from datetime import date, datetime, timedelta
 
 from application.dto.task_dto import to_task_dto, TaskDTO
-from application.services.config_service import merge_config
+from application.services.config_service import merge_config, build_scoring_config
 
 # domain imports (pure domain layer). These must be implemented in core.scoring modules.
 from core.models.dependency_graph import DependencyGraph
@@ -115,7 +115,8 @@ def analyze_tasks_service(tasks_payload: List[Dict], config_overrides: Dict = No
             - warnings: list of validation messages
             - config_used: resolved config mapping
     """
-    config = merge_config(config_overrides or {})
+    config_dict = merge_config(config_overrides or {})
+    scoring_config = build_scoring_config(config_dict)
 
     # convert raw tasks into DTOs
     dtos: List[TaskDTO] = [to_task_dto(raw, _date_parser) for raw in tasks_payload]
@@ -138,7 +139,7 @@ def analyze_tasks_service(tasks_payload: List[Dict], config_overrides: Dict = No
             dto.raw["_blocked_by_cycle"] = True
 
     # scoring
-    engine = PriorityEngine(config)
+    engine = PriorityEngine(scoring_config)
     scored_results = []
     for tid, dto in task_map.items():
         # convert dto into domain TaskEntity expected by engine
@@ -170,5 +171,5 @@ def analyze_tasks_service(tasks_payload: List[Dict], config_overrides: Dict = No
         "blocked_tasks": blocked_tasks,
         "needs_attention": needs_attention,
         "warnings": warnings,
-        "config_used": config
+        "config_used": config_dict
     }

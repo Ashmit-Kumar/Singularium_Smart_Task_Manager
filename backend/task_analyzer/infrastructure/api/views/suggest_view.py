@@ -19,11 +19,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.parsers import JSONParser
 
-from infrastructure.api.serializers.task_serializer import SingleTaskSerializer
 from application.services.suggest_tasks_service import suggest_tasks_service
-
-# simple in-memory cache seeded by analyze endpoint
-_LAST_ANALYZED_PAYLOAD = None
+from infrastructure.api.state import get_last_analyzed_payload, set_last_analyzed_payload
 
 
 class SuggestView(APIView):
@@ -42,15 +39,15 @@ class SuggestView(APIView):
     parser_classes = [JSONParser]
 
     def get(self, request):
-        global _LAST_ANALYZED_PAYLOAD
-
         try:
             # try to read JSON body if present
             body = request.data or {}
             tasks_payload = body.get("tasks") if isinstance(body, dict) else None
 
-            if not tasks_payload and _LAST_ANALYZED_PAYLOAD:
-                tasks_payload = _LAST_ANALYZED_PAYLOAD
+            if isinstance(tasks_payload, list):
+              set_last_analyzed_payload(tasks_payload)
+            else:
+              tasks_payload = get_last_analyzed_payload()
 
             if not tasks_payload:
                 return Response({"results": [], "message": "no_tasks_provided"}, status=status.HTTP_200_OK)
@@ -67,15 +64,10 @@ class SuggestView(APIView):
             return Response({"error": "suggest_failed", "details": str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def post(self, request):
-        """
-        Allow clients to POST tasks to update the in-memory cache used by GET.
-        This mirrors analyze but keeps a lightweight contract.
-        """
-        global _LAST_ANALYZED_PAYLOAD
-        serializer = SingleTaskSerializer(data=request.data)
-        # allow both single task and list of tasks via flexible handling
-        if isinstance(request.data, dict) and "tasks" in request.data:
-            tasks = request.data.get("tasks")
-            _LAST_ANALYZED_PAYLOAD = tasks
-            return Response({"message": "cached"}, status=status.HTTP_200_OK)
-        return Response({"error": "invalid_payload"}, status=status.HTTP_400_BAD_REQUEST)
+      """Allow clients to seed the suggestion cache with an explicit task list."""
+
+      if isinstance(request.data, dict) and isinstance(request.data.get("tasks"), list):
+        set_last_analyzed_payload(request.data.get("tasks"))
+        return Response({"message": "cached"}, status=status.HTTP_200_OK)
+
+      return Response({"error": "invalid_payload"}, status=status.HTTP_400_BAD_REQUEST)

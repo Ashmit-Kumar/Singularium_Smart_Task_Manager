@@ -36,10 +36,12 @@ class DependencyGraph:
 
         task = self.tasks.get(task_id)
         if not task:
+            self.rec_stack.remove(task_id)
             return False
 
         for dep in task.dependencies:
             if self._dfs(dep, path + [dep]):
+                self.rec_stack.remove(task_id)
                 return True
 
         self.rec_stack.remove(task_id)
